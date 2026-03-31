@@ -76,21 +76,26 @@ def get_activities():
     return activities
 
 
-@app.post("/activities/{activity_name}/signup")
-def signup_for_activity(activity_name: str, email: str):
-    """Sign up a student for an activity"""
-    # Validate activity exists
-    if activity_name not in activities:
-        raise HTTPException(status_code=404, detail="Activity not found")
-
+def normalize_email(email: str) -> str:
     normalized_email = email.strip().lower()
     if not normalized_email:
         raise HTTPException(status_code=400, detail="Email is required")
+    return normalized_email
 
-    # Get the specific activity
-    activity = activities[activity_name]
 
-    # Validate student is not already signed up
+def get_activity_or_404(activity_name: str):
+    activity = activities.get(activity_name)
+    if activity is None:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return activity
+
+
+@app.post("/activities/{activity_name}/signup")
+def signup_for_activity(activity_name: str, email: str):
+    """Sign up a student for an activity"""
+    normalized_email = normalize_email(email)
+    activity = get_activity_or_404(activity_name)
+
     if normalized_email in activity["participants"]:
         raise HTTPException(status_code=400, detail="Student already signed up for this activity")
 
@@ -99,3 +104,16 @@ def signup_for_activity(activity_name: str, email: str):
 
     activity["participants"].append(normalized_email)
     return {"message": f"Signed up {normalized_email} for {activity_name}"}
+
+
+@app.delete("/activities/{activity_name}/participants")
+def unregister_from_activity(activity_name: str, email: str):
+    """Remove a student from an activity"""
+    normalized_email = normalize_email(email)
+    activity = get_activity_or_404(activity_name)
+
+    if normalized_email not in activity["participants"]:
+        raise HTTPException(status_code=404, detail="Participant not found for this activity")
+
+    activity["participants"].remove(normalized_email)
+    return {"message": f"Unregistered {normalized_email} from {activity_name}"}

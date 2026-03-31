@@ -38,3 +38,28 @@ def test_signup_allows_new_registration():
         "message": "Signed up newstudent@mergington.edu for Chess Club"
     }
     assert "newstudent@mergington.edu" in activities["Chess Club"]["participants"]
+
+
+def test_unregister_removes_existing_participant():
+    response = client.request(
+        "DELETE",
+        "/activities/Chess Club/participants",
+        params={"email": " Michael@Mergington.edu "},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "message": "Unregistered michael@mergington.edu from Chess Club"
+    }
+    assert "michael@mergington.edu" not in activities["Chess Club"]["participants"]
+
+
+def test_unregister_rejects_missing_participant():
+    response = client.request(
+        "DELETE",
+        "/activities/Chess Club/participants",
+        params={"email": "notfound@mergington.edu"},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Participant not found for this activity"}
